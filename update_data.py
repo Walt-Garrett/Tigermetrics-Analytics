@@ -24,14 +24,14 @@ all_files = ftp.nlst()
 # 6. FILTERING: Grab files that end in .csv AND contain yesterday's date string
 csv_files = [f for f in all_files if f.endswith('.csv') and yesterday_str in f]
 
-os.makedirs('data', exist_ok=True)
+os.makedirs('trackmanData', exist_ok=True)
 
 # 7. Loop through the filtered list and download them
 if not csv_files:
     print(f"No files found for {yesterday_str}.")
 else:
     for filename in csv_files:
-        local_filepath = os.path.join('data', filename)
+        local_filepath = os.path.join('trackmanData', filename)
         with open(local_filepath, 'wb') as local_file:
             print(f"Downloading {filename}...")
             ftp.retrbinary(f"RETR {filename}", local_file.write)
