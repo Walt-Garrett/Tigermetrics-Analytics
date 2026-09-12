@@ -1,0 +1,35 @@
+name: Daily Trackman FTP Download
+
+on:
+  schedule:
+    # Runs at 8:00 AM CDT every day
+    - cron: '0 13 * * *'
+  workflow_dispatch: # Adds a button to GitHub for manual testing
+
+permissions:
+  contents: write # Allows the bot to save files back to my folder
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get latest code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run FTP Download Script
+        env: # Injects my secrets into the script
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: python update_data.py
+
+      - name: Save new CSVs to repository
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Automated daily Trackman data update"
+          file_pattern: 'data/*.csv'
