@@ -5,8 +5,13 @@ from Stuff_plus_calculation import run_stuff_plus_calculation
 # Cache the function to avoid re-running it on every interaction
 @st.cache_data
 def load_pitching_data():
-    return run_stuff_plus_calculation()
+  df = run_stuff_plus_calculation()
 
+  # Format Date column for Streamlit date picker compatibility
+  if "Date" in df.columns:
+    df["Date"] = pd.to_datetime(df["Date"]).dt.date
+
+  return df
 data=load_pitching_data()
 
 st.title("TrackMan Stuff+ Analytics")
@@ -14,31 +19,49 @@ st.title("TrackMan Stuff+ Analytics")
 # --- SIDEBAR CONTROLS ---
 st.sidebar.header("Filter Options")
 
-# 1. Pitcher Handedness Filter
+# 1. Date Range Filter
+date_range = None
+if "Date" in data.columns and not data["Date"].dropna().empty:
+  min_date = data["Date"].min()
+  max_date = data["Date"].max()
+  date_range = st.sidebar.date_input(
+      "Date Range",
+      value=(min_date, max_date),
+      min_value=min_date,
+      max_value=max_date
+  )
+
+# 2. Pitcher Handedness Filter
 throws_options = ["All"] + sorted(
     data["PitcherThrows"].dropna().unique().tolist()
 )
 selected_hand = st.sidebar.selectbox("Pitcher Handedness", options=throws_options)
 
-# 2. Pitch Type Filter
+# 3. Pitch Type Filter
 pitch_options = sorted(data["TaggedPitchType"].dropna().unique().tolist())
 selected_pitches = st.sidebar.multiselect(
     "Pitch Types", options=pitch_options, default=pitch_options
 )
 
-# 3. Pitcher Select Filter
+# 4. Pitcher Select Filter
 pitcher_options = ["All Pitchers"] + sorted(
     data["Pitcher"].dropna().unique().tolist()
 )
 selected_pitcher = st.sidebar.selectbox("Pitcher", options=pitcher_options)
 
-# 4. Minimum Pitches Filter
+# 5. Minimum Pitches Filter
 min_pitches = st.sidebar.slider(
     "Minimum Pitches Thrown", min_value=1, max_value=100, value=10, step=1
 )
 
 # --- FILTER DATA ---
 filtered_df = data.copy()
+
+if date_range and isinstance(date_range, (tuple, list)) and len(date_range) == 2:
+  start_date, end_date = date_range
+  filtered_df = filtered_df[
+      (filtered_df["Date"] >= start_date) & (filtered_df["Date"] <= end_date)
+  ]
 
 if selected_hand != "All":
   filtered_df = filtered_df[filtered_df["PitcherThrows"] == selected_hand]
@@ -81,7 +104,7 @@ st.dataframe(
         "Pitches": "Pitches Thrown",
         "AvgVelo": st.column_config.NumberColumn("Avg Velo", format="%.1f mph"),
         "StuffPlus": st.column_config.NumberColumn(
-            "StuffPlus", help="100 is League Average", format="%d"
+            "Avg Stuff+", help="100 is Team Average.", format="%d"
         ),
     },
     use_container_width=True,
@@ -94,20 +117,24 @@ st.subheader("🔥 Top Individual Pitches Tracked")
 top_n = st.slider("Number of top pitches to show", 5, 50, 10)
 
 top_pitches = (
-    filtered_df.sort_values(by="Stuff+", ascending=False)
-    .head(top_n)[
-        [
-            "Pitcher",
-            "PitcherThrows",
-            "TaggedPitchType",
-            "RelSpeed",
-            "SpinRate",
-            "Stuff+",
-        ]
-    ]
-    .copy()
+    filtered_df.sort_values(by="Stuff+", ascending=False).head(top_n).copy()
 )
 
+# 2. Create Rank column based on the sorted order
+top_pitches["Rank"] = range(1, len(top_pitches) + 1)
+
+# 3. Reorder columns with Rank first
+top_pitches = top_pitches[[
+    "Rank",
+    "Pitcher",
+    "PitcherThrows",
+    "TaggedPitchType",
+    "RelSpeed",
+    "SpinRate",
+    "Stuff+",
+]]
+
+# 4. Format numeric values
 top_pitches["RelSpeed"] = top_pitches["RelSpeed"].round(1)
 top_pitches["SpinRate"] = top_pitches["SpinRate"].round(0)
 top_pitches["Stuff+"] = top_pitches["Stuff+"].round(0).astype(int)
@@ -115,6 +142,7 @@ top_pitches["Stuff+"] = top_pitches["Stuff+"].round(0).astype(int)
 st.dataframe(
     top_pitches,
     column_config={
+        "Rank": st.column_config.NumberColumn("Rank", format="%d"),
         "PitcherThrows": "Hand",
         "TaggedPitchType": "Pitch Type",
         "RelSpeed": st.column_config.NumberColumn("Velo", format="%.1f mph"),
