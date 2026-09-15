@@ -190,9 +190,9 @@ def run_stuff_plus_calculation():
     swVBWeight=0.05
     swIVBWeight=0.10
 
-    chVeloWeight=0.30
+    chVeloWeight=0.35
     chSpinWeight=0.10
-    chHBWeight=0.30
+    chHBWeight=0.25
     chVBWeight=0.05
     chIVBWeight=0.25
 
