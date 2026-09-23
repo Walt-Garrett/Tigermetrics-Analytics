@@ -15,6 +15,7 @@ def load_pitching_data():
 data=load_pitching_data()
 
 st.title("TrackMan Stuff+ Analytics")
+st.markdown("---")
 
 # --- SIDEBAR CONTROLS ---
 st.sidebar.header("Filter Options")
