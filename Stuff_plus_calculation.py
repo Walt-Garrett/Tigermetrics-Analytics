@@ -14,7 +14,7 @@ def run_stuff_plus_calculation():
     # Pull out necessary columns for calculations (Velo, Spin, HB, VB, IVB)
     velocity=data['RelSpeed'].round(2)
     spinRate=data['SpinRate'].round(0)
-    horzBreak=data['HorzBreak'].round(2)
+    horzBreak=abs(data['HorzBreak']).round(2) # Since horizontal break can be either positive (to the right side of the pitcher) or negative (to the left side), we need to convert it to an absolute value for fair scoring.
     vertBreak=data['VertBreak'].round(2)
     inducedVertBreak=data['InducedVertBreak'].round(2)
 
