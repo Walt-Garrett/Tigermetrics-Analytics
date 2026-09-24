@@ -148,7 +148,7 @@ st.dataframe(
     use_container_width=True
 )
 
-st.markdown("Note about strikes/balls: since the provided data only includes pitch metrics and not pitch outcomes, I cannot account for strikes due to whiffs or foul balls. The strike % number reflects only pitches physically inside the zone, and therefore is lower than expected.")
+st.markdown("Note about strikes/balls: since the provided data only includes pitch metrics and not pitch outcomes, I cannot account for strikes due to whiffs or foul balls. The strike % number reflects only pitches physically inside the zone, and therefore is lower than expected. (I plan to add a pitch outcomes tracking feature soon.)")
 
 # Display interactive visualizations
 
