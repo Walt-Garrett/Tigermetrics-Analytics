@@ -84,6 +84,7 @@ leaderboard = (
         Pitches=("Stuff+", "count"),
         AvgVelo=("RelSpeed", "mean"),
         StuffPlus=("Stuff+", "mean"),
+        StuffPlus_MLB=("Stuff+_MLB","mean")
     )
     .reset_index()
 )
@@ -105,12 +106,13 @@ st.dataframe(
         "Pitches": "Pitches Thrown",
         "AvgVelo": st.column_config.NumberColumn("Avg Velo", format="%.1f mph"),
         "StuffPlus": st.column_config.NumberColumn(
-            "Avg Stuff+", help="100 is Team Average.", format="%d"
-        ),
+            "Avg Stuff+", help="100 is Team Average.", format="%d"),
+        "StuffPlus_MLB": st.column_config.NumberColumn(
+            "Avg MLB Scale Stuff+", help="100 is MLB Average.", format="%d")
     },
     use_container_width=True,
-    hide_index=True,
-)
+    hide_index=True
+    )
 
 # --- SECTION 2: TOP INDIVIDUAL PITCH THROWS ---
 st.subheader("🔥 Top Individual Pitches Tracked")

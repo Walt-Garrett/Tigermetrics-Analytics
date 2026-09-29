@@ -132,7 +132,7 @@ summary_df = (
         "Avg_Spin": "Avg Spin",
         "Avg_IVB": "Avg IVB",
         "Avg_HB": "Avg HB",
-        "Strike_Pct": "Strike %"
+        "Strike_Pct": "Zone %"
     })
 )
 
@@ -143,12 +143,26 @@ st.dataframe(
         "Avg Spin": "{:.0f}",
         "Avg IVB": "{:.1f}",
         "Avg HB": "{:.1f}",
-        "Strike %": "{:.1f}%"
+        "Zone %": "{:.1f}%"
     }),
     use_container_width=True
 )
 
-st.markdown("Note about strikes/balls: since the provided data only includes pitch metrics and not pitch outcomes, I cannot account for strikes due to whiffs or foul balls. The strike % number reflects only pitches physically inside the zone, and therefore is lower than expected. (I plan to add a pitch outcomes tracking feature soon.)")
+# Display additional KPIs (effective velo, bb spin rate, vaa)
+fb_list=filtered_data[filtered_data['TaggedPitchType'].isin(['Fastball','Cutter','Sinker'])]
+ch_list=filtered_data[filtered_data['TaggedPitchType'].isin(['ChangeUp','Splitter'])]
+bb_list=filtered_data[filtered_data['TaggedPitchType'].isin(['Curveball','Slider','Sweeper'])]
+fb_avgeff=fb_list['EffVelocity'].mean().round(2)
+ch_avgeff=ch_list['EffVelocity'].mean().round(2)
+vaa=filtered_data['VertApprAngle'].mean().round(2)
+bb_spin=bb_list['SpinRate'].mean().round(0)
+
+davedata_df=pd.DataFrame({
+   'Key Metrics':['Avg FB Eff. Velo','Avg CH Eff. Velo','Avg VAA','BB Spin Rate'],
+   '':[fb_avgeff,ch_avgeff,vaa,bb_spin]
+})
+
+st.dataframe(davedata_df,hide_index=True,use_container_width=True)
 
 # Display interactive visualizations
 
