@@ -54,7 +54,7 @@ st.sidebar.header("Chart Options") # This will allow user to choose different co
 column_options = {'Pitch Type': 'TaggedPitchType',
                   'Velocity':'RelSpeed',
                   'Spin Rate':'SpinRate',
-                  'Strike/Ball':'IsStrike',
+                  'In Zone':'IsStrike',
                   'Extension':'Extension',
                   'Release Height':'RelHeight',
                   'Release Side':'RelSide',
@@ -122,7 +122,7 @@ summary_df = (
         Avg_Spin=("SpinRate", "mean"),
         Avg_IVB=("InducedVertBreak", "mean"),
         Avg_HB=("HorzBreak", "mean"),
-        Strike_Pct=("IsStrike", lambda x: (x == "Strike").mean() * 100),
+        Strike_Pct=("IsStrike", lambda x: (x == "Yes").mean() * 100),
     )
     .reset_index()
     .rename(columns={
