@@ -109,7 +109,7 @@ st.markdown("---")
 # Display KPIs (total pitches, avg velo, max velo, strike pct for each pitch)
 
 total_pitches=len(filtered_data)
-strike_count = (filtered_data["IsStrike"] == "Strike").sum()
+strike_count = (filtered_data["IsStrike"] == "Yes").sum()
 strike_pct = (strike_count / total_pitches * 100) if total_pitches > 0 else 0
 
 st.markdown("### Metrics by Pitch Type")
