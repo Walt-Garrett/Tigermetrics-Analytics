@@ -1,4 +1,6 @@
 import streamlit as st
+from combine_data import combine_csvs
+combine_csvs()
 st.title("Trinity Baseball Tigermetrics")
 st.markdown("Welcome to the Trinity University Baseball Tigermetrics Lab! See the below sections for page guides.")
 st.markdown("---")

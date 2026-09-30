@@ -54,7 +54,7 @@ st.sidebar.header("Chart Options") # This will allow user to choose different co
 column_options = {'Pitch Type': 'TaggedPitchType',
                   'Velocity':'RelSpeed',
                   'Spin Rate':'SpinRate',
-                  'In Zone':'IsStrike',
+                  'Location':'IsStrike',
                   'Extension':'Extension',
                   'Release Height':'RelHeight',
                   'Release Side':'RelSide',
@@ -73,7 +73,7 @@ filtered_data=data[data['Pitcher']==selected_pitcher].copy() # By pitcher
 
 if date_range and isinstance(date_range, (tuple, list)) and len(date_range) == 2: # By date
   start_date, end_date = date_range
-  filtered_df = filtered_data[
+  filtered_data = filtered_data[
       (filtered_data["Date"] >= start_date) & (filtered_data["Date"] <= end_date)
   ]
 
@@ -122,7 +122,7 @@ summary_df = (
         Avg_Spin=("SpinRate", "mean"),
         Avg_IVB=("InducedVertBreak", "mean"),
         Avg_HB=("HorzBreak", "mean"),
-        Strike_Pct=("IsStrike", lambda x: (x == "Yes").mean() * 100),
+        Strike_Pct=("IsStrike", lambda x: (x == "In Zone").mean() * 100),
     )
     .reset_index()
     .rename(columns={
@@ -152,10 +152,10 @@ st.dataframe(
 fb_list=filtered_data[filtered_data['TaggedPitchType'].isin(['Fastball','Cutter','Sinker'])]
 ch_list=filtered_data[filtered_data['TaggedPitchType'].isin(['ChangeUp','Splitter'])]
 bb_list=filtered_data[filtered_data['TaggedPitchType'].isin(['Curveball','Slider','Sweeper'])]
-fb_avgeff=fb_list['EffVelocity'].mean().round(2)
-ch_avgeff=ch_list['EffVelocity'].mean().round(2)
-vaa=filtered_data['VertApprAngle'].mean().round(2)
-bb_spin=bb_list['SpinRate'].mean().round(0)
+fb_avgeff=round(fb_list['EffVelocity'].mean(),2)
+ch_avgeff=round(ch_list['EffVelocity'].mean(),2)
+vaa=round(filtered_data['VertApprAngle'].mean(),2)
+bb_spin=round(bb_list['SpinRate'].mean(),0)
 
 davedata_df=pd.DataFrame({
    'Key Metrics':['Avg FB Eff. Velo','Avg CH Eff. Velo','Avg VAA','BB Spin Rate'],

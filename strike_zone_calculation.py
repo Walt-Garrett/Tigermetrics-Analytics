@@ -35,5 +35,5 @@ def is_strike():
     )
 
     # Apply mask
-    data['IsStrike']=np.where(zone_mask,'Yes','No')
+    data['IsStrike']=np.where(zone_mask,'In Zone','Out of Zone')
     return data
