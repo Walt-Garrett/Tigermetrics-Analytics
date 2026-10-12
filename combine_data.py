@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 data_folder='trackmanData'
-output_file=os.path.join(data_folder,'Master Data File.xlsx')
+output_file=os.path.join(data_folder,'Master Data File.csv')
 
 def combine_csvs():
     if not os.path.exists(data_folder):
@@ -35,6 +35,6 @@ def combine_csvs():
         # Automatically remove duplicate rows if you download overlapping dates
         master_df.drop_duplicates(inplace=True)
 
-        # Export directly to Excel format
-        master_df.to_excel(output_file, index=False, engine='openpyxl')
+        # Export directly to CSV format
+        master_df.to_csv(output_file, index=False, engine='openpyxl')
         print(f"\nSuccess! Merged {len(master_df)} rows into '{output_file}'.")

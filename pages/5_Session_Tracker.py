@@ -11,7 +11,7 @@ st.set_page_config(layout="wide", page_title="Session Tracker")
 
 # Firstly, we will create a dictionary with the following keys: Date, Pitcher, Pitch Number (Specific to that pitcher), and outcome.
 def create_session():
-    data=pd.read_excel("trackmanData/Master Data File.xlsx", engine='openpyxl') # Read in pitcher names
+    data=pd.read_csv("trackmanData/Master Data File.csv", engine='openpyxl') # Read in pitcher names
     pitchers_today=st.multiselect('Select pitchers throwing today',data['Pitcher'].unique())
     # Display all selected pitchers to ensure they are correct
     if st.button('Start Session') and pitchers_today:

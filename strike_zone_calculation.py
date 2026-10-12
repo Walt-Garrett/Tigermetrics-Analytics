@@ -6,7 +6,7 @@ def is_strike():
     # whether a tracked pitch is a strike.
     
     # Load the data from the Master Data File
-    data = pd.read_excel("trackmanData/Master Data File.xlsx", engine='openpyxl')
+    data = pd.read_csv("trackmanData/Master Data File.csv", engine='openpyxl')
     data = data.dropna(subset=['TaggedPitchType','PlateLocHeight','PlateLocSide'])
     data = data[data['PitchSession'] != 'Warmup'] # Keeps only pitches tagged as 'live'
 

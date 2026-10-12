@@ -2,7 +2,7 @@ import pandas as pd #Import necessary libraries
 import numpy as np
 
 def run_stuff_plus_calculation():
-    data=pd.read_excel('trackmanData/Master Data File.xlsx', engine='openpyxl') # Read in data
+    data=pd.read_csv('trackmanData/Master Data File.csv', engine='openpyxl') # Read in data
 
     # Drop all rows with missing values in the 'TaggedPitchType' column and 'Warmup' in the 'PitchSession' column, as these are not relevant to the analysis
     data = data.dropna(subset=['TaggedPitchType'])
