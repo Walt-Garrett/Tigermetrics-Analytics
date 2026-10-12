@@ -2,3 +2,6 @@ pandas
 numpy
 plotly
 openpyxl
+requests
+base64
+time

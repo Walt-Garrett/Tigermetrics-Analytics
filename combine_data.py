@@ -38,6 +38,3 @@ def combine_csvs():
         # Export directly to Excel format
         master_df.to_excel(output_file, index=False, engine='openpyxl')
         print(f"\nSuccess! Merged {len(master_df)} rows into '{output_file}'.")
-
-if __name__ == "__main__":
-    combine_csvs()
