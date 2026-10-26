@@ -1,0 +1,38 @@
+name: Daily TrackMan Download
+
+on:
+  schedule:
+    # Runs at 06:00 UTC every day (adjust timing as needed)
+    - cron: '0 14 * * *'
+  # Allows you to trigger it manually from the GitHub Actions tab anytime
+  workflow_dispatch:
+
+jobs:
+  run-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy
+
+      - name: Run TrackMan Sync Script
+        env:
+          TRACKMAN_FTP_USER: ${{ secrets.FTP_USER }}
+          TRACKMAN_FTP_PASS: ${{ secrets.FTP_PASS }}
+        run: python download_data.py
+
+      - name: Commit and Push Updated Data
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update TrackMan data" && git push)
