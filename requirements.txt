@@ -3,3 +3,6 @@ numpy
 plotly
 openpyxl
 requests
+streamlit
+streamlit-image-coordinates
+pillow
