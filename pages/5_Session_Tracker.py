@@ -189,7 +189,7 @@ def log_pitch(session_log, pitcher, date):
           get_zone_image(), key="strike_zone_tap"
       )
 
-      if coords is not None and coords != st.session_state.last_click:
+      if coords is not None and coords != st.session_state.get("last_click"):
         st.session_state.last_click = coords
         st.session_state.loc_x = coords["x"]
         st.session_state.loc_y = coords["y"]
