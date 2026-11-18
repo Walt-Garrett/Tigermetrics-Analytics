@@ -1,12 +1,62 @@
 import base64
 import time
+from PIL import Image, ImageDraw
 import pandas as pd
 import requests
 import streamlit as st
+from streamlit_image_coordinates import streamlit_image_coordinates
 
 # Page display layout (optimized for iPad touch targets)
 st.set_page_config(layout="wide", page_title="Session Tracker")
 
+pitchtypes = [
+    "Fastball",
+    "Breaking Ball",
+    "Offspeed"
+]
+
+@st.cache_data
+def get_zone_image(width=360,height=450):
+  img=Image.new("RGB", (width, height), color="#f8f9fa")
+  draw=ImageDraw.Draw(img)
+
+  # Outer canvas border
+  draw.rectangle([0, 0, width-1, height-1], outline="#adb5bd", width=2)
+
+  # Strike zone box (centered at x=180, y=215; width=160, height=210)
+  z_left, z_right=100, 260
+  z_top, z_bottom=110, 320
+  draw.rectangle([z_left, z_top, z_right, z_bottom], outline="#212529", width=3)
+
+  # 3x3 inner grid
+  for i in (1, 2):
+    x = z_left + i * (z_right - z_left) / 3
+    y = z_top + i * (z_bottom - z_top) / 3
+    draw.line([(x, z_top), (x, z_bottom)], fill="#dee2e6", width=1)
+    draw.line([(z_left, y), (z_right, y)], fill="#dee2e6", width=1)
+
+  # Home plate (catcher's perspective)
+  plate = [(135, 385), (225, 385), (225, 405), (180, 425), (135, 405)]
+  draw.polygon(plate, fill="#ffffff", outline="#212529", width=2)
+
+  return img
+
+def plot_in_zone(xloc,yloc,width=360,height=450):
+  img=get_zone_image(width,height).copy()
+  draw=ImageDraw.Draw(img)
+
+  # Draw the pitch location as a red dot
+  dot_radius = 5
+  draw.ellipse(
+      [
+          (xloc - dot_radius, yloc - dot_radius),
+          (xloc + dot_radius, yloc + dot_radius),
+      ],
+      fill="red",
+      outline="black",
+  )
+
+  return img
 
 def create_session():
   try:
@@ -27,6 +77,12 @@ def create_session():
         "Pitch Number (Individual)": [],
         "Outcome": [],
         "Count": [],
+        "Pitch Type": [],
+        "Velocity": [],
+        "Location X": [],
+        "Location Y": [],
+        "Norm X": [],
+        "Norm Y": []
     }
     st.session_state.indiv_pitchcount = {
         pitcher: 0 for pitcher in pitchers_today
@@ -48,16 +104,107 @@ def log_pitch(session_log, pitcher, date):
   left_col, right_col = st.columns([1, 1], gap="medium")
 
   with left_col:
-    # ----------------------------------------------------
-    # STEP 1: PITCH OUTCOME
-    # ----------------------------------------------------
     if st.session_state.step == 1:
       st.session_state.count_before_pitch = (
           f"{st.session_state.atbatcount[0]}-{st.session_state.atbatcount[1]}"
       )
       st.session_state.prev_pitch_count = list(st.session_state.atbatcount)
 
-      st.markdown("### Step 1: Select Pitch Outcome")
+      st.markdown("### Step 1: Enter Velocity")
+
+      velo = st.number_input(
+          "Pitch Velocity (mph)",
+          min_value=0.0,
+          max_value=115.0,
+          value=None,
+          step=0.1,
+          format="%.1f",
+          placeholder="Tap to enter velocity",
+          key="velo_input",
+      )
+
+      v_col1, v_col2 = st.columns(2, gap="small")
+      with v_col1:
+        if st.button("Next", use_container_width=True, type="primary"):
+          st.session_state.velocity = (
+              round(velo, 1) if velo is not None else None
+          )
+          st.session_state.step = 2
+          st.rerun()
+      with v_col2:
+        if st.button("Skip Velocity", use_container_width=True):
+          st.session_state.velocity = None
+          st.session_state.step = 2
+          st.rerun()
+
+    elif st.session_state.step == 2:
+      if st.button("Back to Velocity", use_container_width=True):
+        st.session_state.step = 1
+        st.rerun()
+
+      st.markdown("### Step 2: Select Pitch Type")
+      if st.session_state.velocity is not None:
+        st.caption(f"Velocity: **{st.session_state.velocity} mph**")
+
+      pt_col1, pt_col2 = st.columns(2, gap="small")
+      selected_pitch_type = None
+
+      for idx, pt in enumerate(pitchtypes):
+        target_col = pt_col1 if idx % 2 == 0 else pt_col2
+        with target_col:
+          if st.button(pt, use_container_width=True, key=f"pt_{pt}"):
+            selected_pitch_type = pt
+
+      if selected_pitch_type:
+        st.session_state.pitch_type = selected_pitch_type
+        st.session_state.step = 3
+        st.rerun()
+
+    elif st.session_state.step == 3:
+      nav1, nav2 = st.columns(2)
+      with nav1:
+        if st.button("Back to Pitch Type", use_container_width=True):
+          st.session_state.step = 2
+          st.rerun()
+      with nav2:
+        if st.button("Skip Location", use_container_width=True):
+          st.session_state.loc_x = None
+          st.session_state.loc_y = None
+          st.session_state.norm_x = None
+          st.session_state.norm_y = None
+          st.session_state.step = 4
+          st.rerun()
+
+      st.markdown("### Step 3: Tap Pitch Location")
+      st.caption(
+          f"**{st.session_state.pitch_type}**"
+          + (
+              f" ({st.session_state.velocity} mph)"
+              if st.session_state.velocity is not None
+              else ""
+          )
+      )
+
+      coords = streamlit_image_coordinates(
+          get_zone_image(), key="strike_zone_tap"
+      )
+
+      if coords is not None and coords != st.session_state.last_click:
+        st.session_state.last_click = coords
+        st.session_state.loc_x = coords["x"]
+        st.session_state.loc_y = coords["y"]
+        # Normalized to strike zone box center (180, 215) & half-dimensions (80, 105)
+        st.session_state.norm_x = round((coords["x"] - 180) / 80, 3)
+        st.session_state.norm_y = round((215 - coords["y"]) / 105, 3)
+        st.session_state.step = 4
+        st.rerun()
+
+    elif st.session_state.step == 4:
+      if st.button("Back to Location", use_container_width=True):
+        st.session_state.step = 3
+        st.rerun()
+
+      st.markdown("### Step 4: Select Pitch Outcome")
 
       col1, col2 = st.columns(2, gap="small")
       with col1:
@@ -65,7 +212,7 @@ def log_pitch(session_log, pitcher, date):
             "Strike", use_container_width=True, type="primary", key="btn_str"
         ):
           st.session_state.outcome = "Strike"
-          st.session_state.step = 2
+          st.session_state.step = "4_type"
           st.rerun()
 
         if st.button("Ball", use_container_width=True, key="btn_ball"):
@@ -76,7 +223,7 @@ def log_pitch(session_log, pitcher, date):
             st.session_state.atbatcount = [0, 0]
           else:
             st.session_state.pitchresult = "Ball"
-          st.session_state.step = 4
+          st.session_state.step = 5
           st.rerun()
 
       with col2:
@@ -84,27 +231,24 @@ def log_pitch(session_log, pitcher, date):
             "In Play", use_container_width=True, type="primary", key="btn_play"
         ):
           st.session_state.outcome = "In Play"
-          st.session_state.step = 2
+          st.session_state.step = "4_type"
           st.rerun()
 
         if st.button("Hit By Pitch", use_container_width=True, key="btn_hbp"):
           st.session_state.outcome = "Hit By Pitch"
           st.session_state.pitchresult = "Hit By Pitch"
           st.session_state.atbatcount = [0, 0]
-          st.session_state.step = 4
+          st.session_state.step = 5
           st.rerun()
 
-    # ----------------------------------------------------
-    # STEP 2: STRIKE OR CONTACT TYPE
-    # ----------------------------------------------------
-    elif st.session_state.step == 2:
+    elif st.session_state.step == "4_type":
       if st.button("Back to Outcome", use_container_width=True):
         st.session_state.atbatcount = list(st.session_state.prev_pitch_count)
-        st.session_state.step = 1
+        st.session_state.step = 4
         st.rerun()
 
       if st.session_state.outcome == "Strike":
-        st.markdown("### Step 2: Select Strike Type")
+        st.markdown("### Step 4: Select Strike Type")
         s_col1, s_col2, s_col3 = st.columns(3)
         striketype = None
 
@@ -133,11 +277,11 @@ def log_pitch(session_log, pitcher, date):
           else:
             st.session_state.pitchresult = striketype
 
-          st.session_state.step = 4
+          st.session_state.step = 5
           st.rerun()
 
       elif st.session_state.outcome == "In Play":
-        st.markdown("### Step 2: Select Contact Type")
+        st.markdown("### Step 4: Select Contact Type")
         c1, c2 = st.columns(2)
         contacttype = None
 
@@ -154,18 +298,15 @@ def log_pitch(session_log, pitcher, date):
 
         if contacttype:
           st.session_state.contacttype = contacttype
-          st.session_state.step = 3
+          st.session_state.step = "4_result"
           st.rerun()
 
-    # ----------------------------------------------------
-    # STEP 3: PLAY RESULT (IN PLAY ONLY)
-    # ----------------------------------------------------
-    elif st.session_state.step == 3:
+    elif st.session_state.step == "4_result":
       if st.button("Back to Contact Type", use_container_width=True):
-        st.session_state.step = 2
+        st.session_state.step = "4_type"
         st.rerun()
 
-      st.markdown("### Step 3: Select Play Result")
+      st.markdown("### Step 4: Select Play Result")
       r1, r2 = st.columns(2)
       playresult = None
 
@@ -200,26 +341,55 @@ def log_pitch(session_log, pitcher, date):
           )
         else:
           st.session_state.pitchresult = playresult
-        st.session_state.step = 4
+        st.session_state.step = 5
         st.rerun()
 
-    # ----------------------------------------------------
-    # STEP 4: CONFIRMATION
-    # ----------------------------------------------------
-    elif st.session_state.step == 4:
+    elif st.session_state.step == 5:
       next_indiv_count = (
           st.session_state.indiv_pitchcount.get(pitcher, 0) + 1
       )
-
-      st.write("### Confirm Pitch")
-      st.write(f"**Pitcher:** {pitcher}")
-      st.write(f"**Pitch # ({pitcher}):** {next_indiv_count}")
-      st.write(
-          f"**Count Before Pitch:** {st.session_state.count_before_pitch}"
+      velo_display = (
+          f"{st.session_state.velocity} mph"
+          if st.session_state.velocity is not None
+          else "N/A"
       )
-      st.write(f"**Outcome:** {st.session_state.pitchresult}")
+      loc_display = (
+          f"({st.session_state.norm_x}, {st.session_state.norm_y})"
+          if st.session_state.norm_x is not None
+          else "Skipped"
+      )
 
-      b_col1, b_col2 = st.columns(2)
+      st.markdown("### Step 5: Confirm Pitch")
+
+      info_col, preview_col = st.columns([1, 1], gap="small")
+      with info_col:
+        st.write(f"**Pitcher:** {pitcher}")
+        st.write(f"**Pitch # ({pitcher}):** {next_indiv_count}")
+        st.write(
+            f"**Count Before Pitch:** {st.session_state.count_before_pitch}"
+        )
+        st.write(f"**Velocity:** {velo_display}")
+        st.write(f"**Pitch Type:** {st.session_state.pitch_type}")
+        st.write(f"**Zone Coords:** {loc_display}")
+        st.write(f"**Outcome:** {st.session_state.pitchresult}")
+
+      with preview_col:
+        if (
+            st.session_state.loc_x is not None
+            and st.session_state.loc_y is not None
+        ):
+          preview_img = plot_in_zone(
+              st.session_state.loc_x, st.session_state.loc_y
+          )
+          st.image(
+              preview_img,
+              caption="Selected Location",
+              use_container_width=True,
+          )
+        else:
+          st.info("Location skipped.")
+
+      b_col1, b_col2, b_col3 = st.columns(3)
       with b_col1:
         if st.button("Confirm", use_container_width=True, type="primary"):
           st.session_state.pitchcount += 1
@@ -238,10 +408,33 @@ def log_pitch(session_log, pitcher, date):
           st.session_state.session_log["Outcome"].append(
               st.session_state.pitchresult
           )
+          st.session_state.session_log["Pitch Type"].append(
+              st.session_state.pitch_type
+          )
+          st.session_state.session_log["Velocity"].append(
+              st.session_state.velocity
+          )
+          st.session_state.session_log["Location X"].append(
+              st.session_state.loc_x
+          )
+          st.session_state.session_log["Location Y"].append(
+              st.session_state.loc_y
+          )
+          st.session_state.session_log["Norm X"].append(
+              st.session_state.norm_x
+          )
+          st.session_state.session_log["Norm Y"].append(
+              st.session_state.norm_y
+          )
           st.session_state.step = 1
           st.rerun()
       with b_col2:
-        if st.button("Undo / Back", use_container_width=True):
+        if st.button("Re-tap Location", use_container_width=True):
+          st.session_state.atbatcount = list(st.session_state.prev_pitch_count)
+          st.session_state.step = 3
+          st.rerun()
+      with b_col3:
+        if st.button("Undo / Reset", use_container_width=True):
           st.session_state.atbatcount = list(st.session_state.prev_pitch_count)
           st.session_state.step = 1
           st.rerun()
@@ -251,7 +444,17 @@ def log_pitch(session_log, pitcher, date):
     df_log = pd.DataFrame(st.session_state.session_log)
 
     if not df_log.empty:
-      recent_df = df_log.tail(5).iloc[::-1]
+      display_cols = [
+          "Pitch Number (Individual)",
+          "Pitcher",
+          "Velocity",
+          "Pitch Type",
+          "Count",
+          "Outcome",
+          "Norm X",
+          "Norm Y",
+      ]
+      recent_df = df_log[display_cols].tail(5).iloc[::-1]
       st.dataframe(recent_df, use_container_width=True, hide_index=True)
     else:
       st.info("No pitches logged yet in this session.")
@@ -317,9 +520,15 @@ def confirm_end_session_dialog():
 
       if success:
         st.success(f"Session saved to GitHub as `{filename}`!")
-        del st.session_state.session_log
-        if "step" in st.session_state:
-          del st.session_state.step
+        for key in [
+            "session_log",
+            "step",
+            "pitchcount",
+            "atbatcount",
+            "last_click",
+        ]:
+          if key in st.session_state:
+            del st.session_state[key]
         st.rerun()
       else:
         st.error(
